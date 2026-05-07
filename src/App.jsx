@@ -75,7 +75,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // [중요] Firebase 경로 세그먼트 오류 해결: appId 내의 슬래시(/)를 언더바(_)로 변환
-const rawAppId = typeof __app_id !== 'undefined' ? __app_id : "msg-club-2026-production-v4";
+const rawAppId = typeof __app_id !== 'undefined' ? __app_id : "msg-club-2026-production-v5";
 const appId = rawAppId.replace(/\//g, '_');
 
 const MEMBERS = [
@@ -134,14 +134,14 @@ const App = () => {
 
     const unsubLogs = onSnapshot(logsPath, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setLogs(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      setLogs(data.sort((a, b) => new Date(String(b.date || '')) - new Date(String(a.date || ''))));
     }, (error) => console.error("Logs sync error:", error));
 
     const unsubSubs = onSnapshot(subsPath, (snapshot) => {
       const data = {};
       snapshot.docs.forEach(doc => { 
         const toolVal = doc.data().tool;
-        // 객체가 올 경우를 대비해 문자열로 안전하게 저장
+        // 객체가 올 경우를 대비해 문자열로 안전하게 저장 (리액트 렌더링 에러 방지)
         data[doc.id] = typeof toolVal === 'string' ? toolVal : JSON.stringify(toolVal);
       });
       setMemberSubs(data);
@@ -153,6 +153,10 @@ const App = () => {
   const handleSaveLog = async (e) => {
     e.preventDefault();
     if (!user || isSubmitting) return;
+    if (newLog.members.length === 0) {
+      alert("참석 회원을 최소 한 명 선택해 주세요.");
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -198,7 +202,7 @@ const App = () => {
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-slate-50 font-black text-indigo-600 animate-pulse">
-      M.S.G 연결 중...
+      M.S.G 시스템 연결 중...
     </div>
   );
 
@@ -224,7 +228,7 @@ const App = () => {
             <a href={DRIVE_URL} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 p-4 rounded-2xl transition-all mb-4 group border border-white/5">
                 <Database size={16} className="group-hover:rotate-12 transition-transform"/><span className="font-bold text-sm">공동 드라이브</span>
             </a>
-            <p className="text-[10px] text-indigo-400 font-bold uppercase text-center tracking-widest opacity-50">Stable Build v3.2.0</p>
+            <p className="text-[10px] text-indigo-400 font-bold uppercase text-center tracking-widest opacity-50">Stable Build v3.3.0</p>
         </div>
       </nav>
 
@@ -252,7 +256,7 @@ const App = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 transition-all hover:shadow-xl">
                   <h4 className="font-black text-xl mb-8 flex items-center gap-3 text-indigo-600"><Users size={24}/> 동아리 회원 명단</h4>
                   <div className="grid grid-cols-1 gap-3">
                     {MEMBERS.map(m => (
@@ -267,7 +271,7 @@ const App = () => {
                   </div>
                 </div>
 
-                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 transition-all hover:shadow-xl">
                   <h4 className="font-black text-xl mb-8 flex items-center gap-3 text-indigo-600"><Calendar size={24}/> 연구 마일스톤</h4>
                   <div className="space-y-6">
                      <TimelineItem month="5월" task="AI·디지털 기반 교육과정 재구성 연수" done />
@@ -290,11 +294,11 @@ const App = () => {
                   {MEMBERS.map(m => (
                     <div key={m.name} className="flex flex-col md:flex-row md:items-center gap-6 p-6 bg-slate-50 rounded-[2rem] border transition-all hover:bg-white hover:border-indigo-100 hover:shadow-lg">
                       <div className="flex items-center gap-4 w-40 shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-700 shadow-sm">{m.name[0]}</div>
+                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-black text-indigo-700 shadow-sm">{m.name[0]}</div>
                           <span className="font-black text-slate-800 text-lg">{m.name}</span>
                       </div>
-                      <input className="flex-1 bg-white p-5 rounded-2xl outline-none text-sm font-bold border-2 border-transparent focus:border-indigo-200 shadow-sm transition-all" placeholder="구독 도구(예: Claude 3.5, GPT-4o)를 입력하세요..." value={String(memberSubs[m.name] || '')} onChange={(e) => handleUpdateSub(m.name, e.target.value)} />
-                      <div className="w-24 text-right shrink-0">{memberSubs[m.name] ? <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 flex items-center gap-1 justify-center"><UserCheck size={12}/> 완료</span> : <span className="text-[10px] font-black text-slate-300">미등록</span>}</div>
+                      <input className="flex-1 bg-white p-5 rounded-2xl outline-none text-sm font-bold border-2 border-transparent focus:border-indigo-200 shadow-sm transition-all placeholder:text-slate-300" placeholder="구독 도구(예: Claude 3.5, GPT-4o)를 입력하세요..." value={String(memberSubs[m.name] || '')} onChange={(e) => handleUpdateSub(m.name, e.target.value)} />
+                      <div className="w-24 text-right shrink-0">{memberSubs[m.name] ? <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 flex items-center gap-1 justify-center"><UserCheck size={12}/> 완료</span> : <span className="text-[10px] font-black text-slate-300 bg-slate-100 px-4 py-2 rounded-full">미등록</span>}</div>
                     </div>
                   ))}
                </div>
@@ -357,14 +361,21 @@ const App = () => {
                     <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
                       <div>
                           <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full uppercase tracking-tighter shadow-sm">{String(log.date || '')}</span>
+                            {/* React Child Object 방지를 위한 강제 문자열 치환 */}
+                            <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 px-4 py-2 rounded-full uppercase tracking-tighter shadow-sm">
+                              {String(log.date || '')}
+                            </span>
                             <div className="flex gap-1 flex-wrap">
                               {log.members?.map(m => (
-                                <span key={String(m)} className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">@{String(m)}</span>
+                                <span key={String(m)} className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                                  @{String(m)}
+                                </span>
                               ))}
                             </div>
                           </div>
-                          <h4 className="text-3xl font-black text-slate-900 mt-5 tracking-tight group-hover:text-indigo-600 transition-colors leading-snug">{String(log.title || '')}</h4>
+                          <h4 className="text-3xl font-black text-slate-900 mt-5 tracking-tight group-hover:text-indigo-600 transition-colors leading-snug">
+                            {String(log.title || '')}
+                          </h4>
                       </div>
                       <FileText className="text-slate-100 group-hover:text-indigo-100 transition-colors shrink-0 hidden md:block" size={56} />
                     </div>
